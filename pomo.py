@@ -25,7 +25,7 @@ parser.add_argument(
     dest="duration",
     help="duration of session in minutes",
     type=int,
-    choice=range(1, 1000),
+    choices=range(1, 1000),
 )
 args = parser.parse_args()
 
