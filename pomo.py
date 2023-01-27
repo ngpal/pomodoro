@@ -18,11 +18,14 @@ mode = parser.add_mutually_exclusive_group()
 mode.add_argument("-f", "--focus", help="focus mode", action="store_true")
 mode.add_argument("-r", "--rest", help="rest mode", action="store_true")
 mode.add_argument("-s", "--stats", help="statistics", action="store_true")
-mode.add_argument(
-    "-ct", "--clear-today", help="clear today's stats", action="store_true"
-)
+mode.add_argument("-ct", help="clear today's stats", action="store_true")
 parser.add_argument(
-    "-d", metavar="", dest="duration", help="duration of session in minutes", type=int
+    "-d",
+    metavar="",
+    dest="duration",
+    help="duration of session in minutes",
+    type=int,
+    choice=range(1, 1000),
 )
 args = parser.parse_args()
 
