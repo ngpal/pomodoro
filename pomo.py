@@ -2,7 +2,6 @@ import argparse
 import os
 import pickle
 import time
-from collections import defaultdict
 from datetime import date
 
 from rich import print
@@ -11,7 +10,8 @@ from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn
 BAR_WIDTH = 50
 F_DEFAULT = 20
 R_DEFAULT = 5
-TODAY = str(date.today())
+DING = "/home/nandu/pomodoro/ding.mp3"
+DATE = str(date.today())
 
 parser = argparse.ArgumentParser()
 mode = parser.add_mutually_exclusive_group()
@@ -28,6 +28,10 @@ parser.add_argument(
     choices=range(1, 1000),
 )
 args = parser.parse_args()
+
+
+def ding():
+    os.system(f"mpg123 {DING} -q")
 
 
 class DailyStat:
@@ -51,12 +55,12 @@ except FileNotFoundError:
 
 
 def save_data(data):
-    stat[TODAY] = data
+    stat[DATE] = data
     with open("/home/nandu/.pomo/stats.dat", "wb") as f:
         pickle.dump(stat, f)
 
 
-t_stat = stat.get(TODAY, DailyStat())
+t_stat = stat.get(DATE, DailyStat())
 
 
 if args.focus:
@@ -74,10 +78,12 @@ if args.focus:
         while not progress.finished:
             progress.update(timer, advance=1)
             time.sleep(1)
-        else:
-            t_stat.total_time_focused += duration
-            t_stat.focus_sessions_completed += 1
-            save_data(t_stat)
+
+    t_stat.total_time_focused += duration
+    t_stat.focus_sessions_completed += 1
+    save_data(t_stat)
+    print("[green b] Session complete!")
+    ding()
 
 elif args.rest:
     duration = R_DEFAULT
@@ -94,10 +100,12 @@ elif args.rest:
         while not progress.finished:
             progress.update(timer, advance=1)
             time.sleep(1)
-        else:
-            t_stat.total_time_rested += duration
-            t_stat.rest_sessions_completed += 1
-            save_data(t_stat)
+
+    t_stat.total_time_rested += duration
+    t_stat.rest_sessions_completed += 1
+    save_data(t_stat)
+    print("[green b] Session complete!")
+    ding()
 
 elif args.stats:
     print(f"[yellow b u]TODAY'S STATS\n")
