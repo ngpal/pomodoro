@@ -1,5 +1,5 @@
-[X] CLI pomodoro timer
-[ ] Configurable settings [Work duration, break duration etc]
-[ ] Motivational quotes
-[ ] Aesthetically pleasing
-[ ] Hopefully portable to share with Meghoos.
+- [X] CLI pomodoro timer
+- [ ] Configurable settings [Work duration, break duration etc]
+- [ ] Motivational quotes
+- [ ] Aesthetically pleasing
+- [ ] Hopefully portable to share with Meghoos.

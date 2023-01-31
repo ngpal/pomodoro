@@ -114,7 +114,7 @@ elif args.stats:
     print(f"Focus sessions completed           {t_stat.focus_sessions_completed}")
     print(f"Rest sessions completed            {t_stat.rest_sessions_completed}")
 
-elif args.clear_today:
+elif args.ct:
     confirm = input(
         "Are you sure you want to reset all of today's progress? [y/n] (n): "
     )
