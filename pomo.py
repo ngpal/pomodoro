@@ -10,7 +10,8 @@ from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn
 BAR_WIDTH = 50
 F_DEFAULT = 20
 R_DEFAULT = 5
-DING = "/home/nandu/pomodoro/ding.mp3"
+PATH = f"{os.path.realpath(os.path.dirname(__file__))}"
+DING = f"{PATH}/ding.mp3"
 DATE = str(date.today())
 
 parser = argparse.ArgumentParser()
@@ -46,17 +47,17 @@ class DailyStat:
 
 
 try:
-    with open("/home/nandu/.pomo/stats.dat", "rb+") as f:
+    with open(f"{PATH}/.pomo/stats.dat", "rb+") as f:
         stat = pickle.load(f)
 except FileNotFoundError:
-    os.system("mkdir ~/.pomo/")
-    open("/home/nandu/.pomo/stats.dat", "w").close()
+    os.system(f"mkdir {PATH}/.pomo/")
+    open(f"{PATH}/.pomo/stats.dat", "w").close()
     stat = {}
 
 
 def save_data(data):
     stat[DATE] = data
-    with open("/home/nandu/.pomo/stats.dat", "wb") as f:
+    with open(f"{PATH}/.pomo/stats.dat", "wb") as f:
         pickle.dump(stat, f)
 
 
