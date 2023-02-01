@@ -1,0 +1,13 @@
+{desc}
+
+[b]USAGE[/]
+    {usage}
+
+[b]COMMANDS[/]
+{commands}
+
+[b]FLAGS[/]
+{flags}
+
+[b]EXAMPLES[/]
+{examples}
