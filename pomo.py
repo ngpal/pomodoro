@@ -130,7 +130,7 @@ def parse_args(args: str) -> list:
         return [args_list[0], None, None]
     elif re.match(r"^(focus|rest)\s+([1-9]|[1-9][0-9]|[1-9][0-9][0-9])", args):
         return [args_list[0], int(args_list[1]), None]
-    elif re.match(r"^(focus|rest|stat)\s+(\-(h|q)|\-\-(help|quiet))", args):
+    elif re.match(r"^(focus|rest|stats)\s+(\-(h|q)|\-\-(help|quiet))", args):
         return [args_list[0], None, args_list[1]]
     elif re.match(
         r"^(focus|rest)\s+([1-9]|[1-9][0-9]|[1-9][0-9][0-9])\s+(\-(h|q)|\-\-(help|quiet))",
@@ -206,7 +206,7 @@ match parse_args(" ".join(args)):
 
     case "stats", _, flag:
         if flag in ["-h", "--help"]:
-            help("stat")
+            help("stats")
             quit()
 
         console.print(f"[yellow b u]TODAY'S STATS\n")
