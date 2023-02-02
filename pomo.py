@@ -7,6 +7,7 @@ from datetime import date
 from itertools import cycle
 from sys import argv
 
+from dateutil import parser
 from rich.console import Console
 from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn
 
@@ -24,7 +25,7 @@ ARG_PATTERS = {
     "cmd": re.compile(r"^(focus|rest|stats)$"),
     "cmd dur": re.compile(rf"^(focus|rest)\s+{NUMS}"),
     "cmd flag": re.compile(rf"^(focus|rest)\s+{FLAGS}"),
-    "stats help": re.compile(r"^(stats)\s+(\-h|\-\-help)"),
+    "stats flag": re.compile(r"^(stats)\s+(\-(h|g)|\-\-(help|graph))"),
     "cmd dur flag": re.compile(rf"^(focus|rest)\s+{NUMS}\s+{FLAGS}"),
 }
 
@@ -110,6 +111,12 @@ def help(command=None):
                 [
                     "python3 pomo.py stats",
                 ],
+                flags=[
+                    (
+                        "--graph",
+                        "displays a bar graph of the F/R ratio from the past week",
+                    )
+                ],
             )
 
         case _:
@@ -155,6 +162,12 @@ def save_data(data):
         pickle.dump(stat, f)
 
 
+def get_past_data():
+    with open(f"{PATH}/.pomo/stats.dat", "rb") as f:
+        stats = pickle.load(f)
+    return sorted(stats.items(), key=lambda x: x[0])[-7:]
+
+
 def parse_args(args: str) -> list:
     args_list = args.split()
     if ARG_PATTERS["cmd"].match(args):
@@ -163,8 +176,8 @@ def parse_args(args: str) -> list:
         return [args_list[0], int(args_list[1]), None]
     elif ARG_PATTERS["cmd flag"].match(args):
         return [args_list[0], None, args_list[1]]
-    elif ARG_PATTERS["stats help"].match(args):
-        return ["stats", None, "-h"]
+    elif ARG_PATTERS["stats flag"].match(args):
+        return ["stats", None, args_list[1]]
     elif ARG_PATTERS["cmd dur flag"].match(args):
         return [args_list[0], int(args_list[1]), args_list[2]]
     return [None, None, None]
@@ -242,6 +255,61 @@ def render_stopwatch(text: str) -> int:
         return t // 100
 
 
+def name_days(data):
+    new_data = []
+    if len(data):
+        new_data.append(("Today".ljust(9), data[-1][1]))
+
+    if len(data) > 1:
+        new_data.append(("Yesterday", data[-2][1]))
+
+    for date, val in data[-3:0:-1]:
+        day = parser.parse(date).date().strftime("%A").ljust(9)
+        new_data.append((day, val))
+
+    return new_data[::-1]
+
+
+def render_graph():
+    def fr_gen(x: DailyStat):
+        if not x.total_time_rested:
+            return x.total_time_focused
+
+        return x.total_time_focused / x.total_time_rested
+
+    data = get_past_data()
+
+    if not data:
+        console.print("[red b]No data!")
+        quit()
+
+    data = [(date, fr_gen(stat)) for date, stat in data]
+    data = name_days(data)
+
+    max_val = max(x for _, x in data)
+
+    console.print("[magenta b]F/R RATIO GRAPH FOR THE PAST 7 DAYS\n")
+    console.print("[green on green]0[/][green b] Good (above 2)   ", end="")
+    console.print("[red on red]0[/][red b] Bad (below 2)\n")
+
+    for key, val in data:
+        l = int(50 * val / max_val)
+
+        if val <= 2:
+            out = "[red]"
+        else:
+            out = "[green]"
+
+        if l > 1:
+            out += "▇" * l
+        else:
+            out += "▏"
+
+        console.print(f"[blue]{key}[/] : {out} [/][b]{val:.2f}")
+
+    print("")
+
+
 stat = get_stats()
 t_stat = stat.get(DATE, DailyStat())
 
@@ -286,38 +354,43 @@ match parse_args(" ".join(args)):
     case "stats", _, flag:
         if flag in ["-h", "--help"]:
             help("stats")
-            quit()
 
-        try:
-            ratio = t_stat.total_time_focused / t_stat.total_time_rested
-            if ratio > 1:
-                ratio = f"[green b]{ratio:.2f}"
-            else:
-                ratio = f"[red b]{ratio:.2f}"
-        except ZeroDivisionError:
-            ratio = "[red b]No rest today"
+        elif flag in ["-g", "--graph"]:
+            render_graph()
 
-        fm, fs = divmod(t_stat.total_time_focused, 60)
-        fdat = f"[green b]{fm}[/] minutes"
-        if fs:
-            fdat += f" [green b]{fs}[/] seconds"
+        else:
+            try:
+                ratio = t_stat.total_time_focused / t_stat.total_time_rested
+                if ratio > 1:
+                    ratio = f"[green b]{ratio:.2f}"
+                else:
+                    ratio = f"[red b]{ratio:.2f}"
+            except ZeroDivisionError:
+                ratio = "[red b]No rest today"
 
-        rm, rs = divmod(t_stat.total_time_rested, 60)
-        rdat = f"[magenta b]{rm}[/] minutes"
-        if rs:
-            rdat += f" [magenta b]{rs}[/] seconds"
+            fm, fs = divmod(t_stat.total_time_focused, 60)
+            fdat = f"[green b]{fm}[/] minutes"
+            if fs:
+                fdat += f" [green b]{fs}[/] seconds"
 
-        with open(f"{PATH}/stats_template.txt") as f:
-            template = f.read()
+            rm, rs = divmod(t_stat.total_time_rested, 60)
+            rdat = f"[magenta b]{rm}[/] minutes"
+            if rs:
+                rdat += f" [magenta b]{rs}[/] seconds"
 
-        template = template.replace("{focused}", fdat)
-        template = template.replace("{rested}", rdat)
-        template = template.replace("{fcount}", f"{t_stat.focus_sessions_completed}")
-        template = template.replace("{rcount}", f"{t_stat.rest_sessions_completed}")
-        template = template.replace("{ratio}", ratio)
+            with open(f"{PATH}/stats_template.txt") as f:
+                template = f.read()
 
-        console.print("[red b u]TODAY'S STATS[/]\n")
-        console.print(template)
+            template = template.replace("{focused}", fdat)
+            template = template.replace("{rested}", rdat)
+            template = template.replace(
+                "{fcount}", f"{t_stat.focus_sessions_completed}"
+            )
+            template = template.replace("{rcount}", f"{t_stat.rest_sessions_completed}")
+            template = template.replace("{ratio}", ratio)
+
+            console.print("[red b u]TODAY'S STATS[/]\n")
+            console.print(template)
 
     case _:
         console.print("Invalid syntax. Use [b]python3 pomo.py -h[/] for help")
