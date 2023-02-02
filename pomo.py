@@ -209,15 +209,26 @@ match parse_args(" ".join(args)):
             help("stats")
             quit()
 
-        console.print(f"[yellow b u]TODAY'S STATS\n")
-        console.print(f"Total time focused                 {t_stat.total_time_focused}")
-        console.print(f"Total time rested                  {t_stat.total_time_rested}")
-        console.print(
-            f"Focus sessions completed           {t_stat.focus_sessions_completed}"
-        )
-        console.print(
-            f"Rest sessions completed            {t_stat.rest_sessions_completed}"
-        )
+        try:
+            ratio = t_stat.total_time_focused / t_stat.total_time_rested
+            if ratio > 1:
+                ratio = f"[green b]{ratio:.2f}"
+            else:
+                ratio = f"[red b]{ratio:.2f}"
+        except ZeroDivisionError:
+            ratio = "[red b]No rest today"
+
+        with open(f"{PATH}/stats_template.txt") as f:
+            template = f.read()
+
+        template = template.replace("{focused}", f"{t_stat.total_time_focused}")
+        template = template.replace("{rested}", f"{t_stat.total_time_rested}")
+        template = template.replace("{fcount}", f"{t_stat.focus_sessions_completed}")
+        template = template.replace("{rcount}", f"{t_stat.rest_sessions_completed}")
+        template = template.replace("{ratio}", ratio)
+
+        console.print("[yellow b u]TODAY'S STATS[/]\n")
+        console.print(template)
 
     case _:
         console.print("Invalid syntax. Use [b]python3 pomo.py -h[/] for help")

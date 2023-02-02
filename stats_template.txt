@@ -1,0 +1,3 @@
+Total time focused    : [green b]{focused}[/] minutes in [cyan b]{fcount}[/] session(s)
+Total time rested     : [magenta b]{rested}[/] minutes in [cyan b]{rcount}[/] session(s)
+Focus to rest ratio   : {ratio}
