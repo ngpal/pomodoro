@@ -1,5 +1,5 @@
 - [X] functioning pomodoro app
 - [X] cli
 - [X] daily stats
-- [ ] stopwatch mode
+- [X] stopwatch mode
 - [ ] all stats / average stats (weekly, monthly etc.)
