@@ -163,10 +163,10 @@ def render_timer(command: str, dur: int, flag: str):
             time.sleep(1)
 
     if command == "Focus":
-        t_stat.total_time_focused += dur
+        t_stat.total_time_focused += dur * 60
         t_stat.focus_sessions_completed += 1
     else:
-        t_stat.total_time_rested += dur
+        t_stat.total_time_rested += dur * 60
         t_stat.rest_sessions_completed += 1
 
     save_data(t_stat)
@@ -218,11 +218,21 @@ match parse_args(" ".join(args)):
         except ZeroDivisionError:
             ratio = "[red b]No rest today"
 
+        fm, fs = divmod(t_stat.total_time_focused, 60)
+        fdat = f"[green b]{fm}[/] minutes"
+        if fs:
+            fdat += f" [green b]{fs}[/] seconds"
+
+        rm, rs = divmod(t_stat.total_time_rested, 60)
+        rdat = f"[magenta b]{rm}[/] minutes"
+        if rs:
+            rdat += f" [magenta b]{rs}[/] seconds"
+
         with open(f"{PATH}/stats_template.txt") as f:
             template = f.read()
 
-        template = template.replace("{focused}", f"{t_stat.total_time_focused}")
-        template = template.replace("{rested}", f"{t_stat.total_time_rested}")
+        template = template.replace("{focused}", f"{fdat}")
+        template = template.replace("{rested}", f"{rdat}")
         template = template.replace("{fcount}", f"{t_stat.focus_sessions_completed}")
         template = template.replace("{rcount}", f"{t_stat.rest_sessions_completed}")
         template = template.replace("{ratio}", ratio)
