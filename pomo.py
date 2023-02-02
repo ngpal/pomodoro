@@ -18,6 +18,18 @@ PATH = f"{os.path.realpath(os.path.dirname(__file__))}"
 DING = f"{PATH}/ding.mp3"
 DATE = str(date.today())
 
+FLAGS = r"(\-(h|q|s)|\-\-(help|quiet|stopwatch))"
+NUMS = r"([1-9]|[1-9][0-9]|[1-9][0-9][0-9])"
+ARG_PATTERS = {
+    "cmd": re.compile(r"^(focus|rest|stats)$"),
+    "cmd dur": re.compile(rf"^(focus|rest)\s+{NUMS}"),
+    "cmd flag": re.compile(rf"^(focus|rest)\s+{FLAGS}"),
+    "stats help": re.compile(r"^(stats)\s+(\-h|\-\-help)"),
+    "cmd dur flag": re.compile(rf"^(focus|rest)\s+{NUMS}\s+{FLAGS}"),
+}
+
+hide_cursor = lambda: print("\033[?25l", end="")
+show_cursor = lambda: print("\033[?25h", end="")
 console = Console(highlight=False)
 
 
@@ -31,16 +43,13 @@ class DailyStat:
         self.focus_sessions_completed = 0
         self.rest_sessions_completed = 0
 
+    def update_focus(self, dur: int):
+        self.total_time_focused += dur
+        self.focus_sessions_completed += 1
 
-try:
-    with open(f"{PATH}/.pomo/stats.dat", "rb+") as f:
-        stat = pickle.load(f)
-except EOFError:
-    stat = {}
-except FileNotFoundError:
-    os.system(f"mkdir {PATH}/.pomo/")
-    open(f"{PATH}/.pomo/stats.dat", "w").close()
-    stat = {}
+    def update_rest(self, dur: int):
+        self.total_time_rested += dur
+        self.rest_sessions_completed += 1
 
 
 @dataclass
@@ -126,23 +135,24 @@ def ding():
     os.system(f"mpg123 {DING} -q")
 
 
+def get_stats():
+    try:
+        with open(f"{PATH}/.pomo/stats.dat", "rb+") as f:
+            stat = pickle.load(f)
+    except EOFError:
+        stat = {}
+    except FileNotFoundError:
+        os.system(f"mkdir {PATH}/.pomo/")
+        open(f"{PATH}/.pomo/stats.dat", "w").close()
+        stat = {}
+
+    return stat
+
+
 def save_data(data):
     stat[DATE] = data
     with open(f"{PATH}/.pomo/stats.dat", "wb") as f:
         pickle.dump(stat, f)
-
-
-FLAGS = r"(\-(h|q|s)|\-\-(help|quiet|stopwatch))"
-NUMS = r"([1-9]|[1-9][0-9]|[1-9][0-9][0-9])"
-ARG_PATTERS = {
-    "cmd": re.compile(r"^(focus|rest|stats)$"),
-    "cmd dur": re.compile(rf"^(focus|rest)\s+{NUMS}"),
-    "cmd flag": re.compile(rf"^(focus|rest)\s+{FLAGS}"),
-    "stats help": re.compile(r"^(stats)\s+(\-h|\-\-help)"),
-    "cmd dur flag": re.compile(
-        rf"^(focus|rest)\s+([1-9]|[1-9][0-9]|[1-9][0-9][0-9])\s+{FLAGS}"
-    ),
-}
 
 
 def parse_args(args: str) -> list:
@@ -183,21 +193,15 @@ def render_timer(command: str, dur: int, flag: str):
             time.sleep(1)
 
     if command == "Focus":
-        t_stat.total_time_focused += dur * 60
-        t_stat.focus_sessions_completed += 1
+        t_stat.update_focus(dur * 60)
     else:
-        t_stat.total_time_rested += dur * 60
-        t_stat.rest_sessions_completed += 1
+        t_stat.update_rest(dur * 60)
 
     save_data(t_stat)
     console.print("[green b] Session complete!")
 
     if flag not in ["-q", "--quiet"]:
         ding()
-
-
-hide_cursor = lambda: print("\033[?25l", end="")
-show_cursor = lambda: print("\033[?25h", end="")
 
 
 def format_time(h, m, s):
@@ -238,6 +242,7 @@ def render_stopwatch(text: str) -> int:
         return t // 100
 
 
+stat = get_stats()
 t_stat = stat.get(DATE, DailyStat())
 
 args = argv[1:4]
@@ -253,8 +258,7 @@ match parse_args(" ".join(args)):
 
         if flag in ["-s", "--stopwatch"]:
             t = render_stopwatch("[yellow]Focus[/]")
-            t_stat.total_time_focused += t
-            t_stat.focus_sessions_completed += 1
+            t_stat.update_focus(t)
             save_data(t_stat)
             quit()
 
@@ -270,8 +274,7 @@ match parse_args(" ".join(args)):
 
         if flag in ["-s", "--stopwatch"]:
             t = render_stopwatch("[yellow]Rest[/]")
-            t_stat.total_time_rested += t
-            t_stat.rest_sessions_completed += 1
+            t_stat.update_rest(t)
             save_data(t_stat)
             quit()
 
@@ -307,13 +310,13 @@ match parse_args(" ".join(args)):
         with open(f"{PATH}/stats_template.txt") as f:
             template = f.read()
 
-        template = template.replace("{focused}", f"{fdat}")
-        template = template.replace("{rested}", f"{rdat}")
+        template = template.replace("{focused}", fdat)
+        template = template.replace("{rested}", rdat)
         template = template.replace("{fcount}", f"{t_stat.focus_sessions_completed}")
         template = template.replace("{rcount}", f"{t_stat.rest_sessions_completed}")
         template = template.replace("{ratio}", ratio)
 
-        console.print("[yellow b u]TODAY'S STATS[/]\n")
+        console.print("[red b u]TODAY'S STATS[/]\n")
         console.print(template)
 
     case _:
