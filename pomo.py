@@ -4,6 +4,7 @@ import re
 import time
 from dataclasses import dataclass, field
 from datetime import date
+from itertools import cycle
 from sys import argv
 
 from rich.console import Console
@@ -12,6 +13,7 @@ from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn
 BAR_WIDTH = 50
 F_DEFAULT = 20
 R_DEFAULT = 5
+SPIN = cycle(["⡇", "⠏", "⠛", "⠹", "⢸", "⣰", "⣤", "⣆"])
 PATH = f"{os.path.realpath(os.path.dirname(__file__))}"
 DING = f"{PATH}/ding.mp3"
 DATE = str(date.today())
@@ -75,7 +77,10 @@ def help(command=None):
                 "Starts a focus mode session with default time if none given.",
                 "python3 pomo.py focus \\[time] \\[flags]",
                 ["python3 pomo.py focus 20 -q"],
-                flags=[("--quiet", "disables ding when timer ends")],
+                flags=[
+                    ("--quiet", "disables ding when timer ends"),
+                    ("--stopwatch", "stopwatch mode (timer goes on indefinitely)"),
+                ],
             )
 
         case "rest":
@@ -83,7 +88,10 @@ def help(command=None):
                 "Starts a rest mode session with default time if none given.",
                 "python3 pomo.py rest \\[time] \\[flags]",
                 ["python3 pomo.py rest 20 -q"],
-                flags=[("--quiet", "disables ding when timer ends")],
+                flags=[
+                    ("--quiet", "disables ding when timer ends"),
+                    ("--stopwatch", "stopwatch mode (timer goes on indefinitely)"),
+                ],
             )
 
         case "stats":
@@ -100,8 +108,8 @@ def help(command=None):
                 "Become more productive right from the command line.",
                 "python3 pomo.py <command> \\[flags]",
                 [
-                    "python3 pomo.py focus 12",
-                    "python3 pomo.py rest -q",
+                    "python3 pomo.py focus -s",
+                    "python3 pomo.py rest 12 -q",
                     "python3 pomo.py stats",
                 ],
                 [
@@ -124,18 +132,30 @@ def save_data(data):
         pickle.dump(stat, f)
 
 
+FLAGS = r"(\-(h|q|s)|\-\-(help|quiet|stopwatch))"
+NUMS = r"([1-9]|[1-9][0-9]|[1-9][0-9][0-9])"
+ARG_PATTERS = {
+    "cmd": re.compile(r"^(focus|rest|stats)$"),
+    "cmd dur": re.compile(rf"^(focus|rest)\s+{NUMS}"),
+    "cmd flag": re.compile(rf"^(focus|rest)\s+{FLAGS}"),
+    "stats help": re.compile(r"^(stats)\s+(\-h|\-\-help)"),
+    "cmd dur flag": re.compile(
+        rf"^(focus|rest)\s+([1-9]|[1-9][0-9]|[1-9][0-9][0-9])\s+{FLAGS}"
+    ),
+}
+
+
 def parse_args(args: str) -> list:
     args_list = args.split()
-    if re.match(r"^(focus|rest|stats)$", args):
+    if ARG_PATTERS["cmd"].match(args):
         return [args_list[0], None, None]
-    elif re.match(r"^(focus|rest)\s+([1-9]|[1-9][0-9]|[1-9][0-9][0-9])", args):
+    elif ARG_PATTERS["cmd dur"].match(args):
         return [args_list[0], int(args_list[1]), None]
-    elif re.match(r"^(focus|rest|stats)\s+(\-(h|q)|\-\-(help|quiet))", args):
+    elif ARG_PATTERS["cmd flag"].match(args):
         return [args_list[0], None, args_list[1]]
-    elif re.match(
-        r"^(focus|rest)\s+([1-9]|[1-9][0-9]|[1-9][0-9][0-9])\s+(\-(h|q)|\-\-(help|quiet))",
-        args,
-    ):
+    elif ARG_PATTERS["stats help"].match(args):
+        return ["stats", None, "-h"]
+    elif ARG_PATTERS["cmd dur flag"].match(args):
         return [args_list[0], int(args_list[1]), args_list[2]]
     return [None, None, None]
 
@@ -176,6 +196,48 @@ def render_timer(command: str, dur: int, flag: str):
         ding()
 
 
+hide_cursor = lambda: print("\033[?25l", end="")
+show_cursor = lambda: print("\033[?25h", end="")
+
+
+def format_time(h, m, s):
+    m = str(m).rjust(2, "0")
+    s = str(s).rjust(2, "0")
+
+    return f"{h}:{m}:{s}"
+
+
+def render_stopwatch(text: str) -> int:
+    h = m = s = 0
+    w, _ = os.get_terminal_size()
+    spinner = next(SPIN)
+    t = 0
+
+    try:
+        hide_cursor()
+        while True:
+            w, _ = os.get_terminal_size()
+            w = w - len(text) - 8
+            m, s = divmod(t // 100, 60)
+            h, m = divmod(m, 60)
+            console.print(
+                f"[green]{spinner}[/] {text} [cyan]{format_time(h, m, s)}",
+                end=" " * w + "\r",
+            )
+            time.sleep(0.01)
+            t += 1
+
+            if not t % 10:
+                spinner = next(SPIN)
+
+    except KeyboardInterrupt:
+        show_cursor()
+        console.print(" " * w, end="\r")
+        console.print(f"[red b]![/] {text} [green b]{format_time(h, m, s)}")
+
+        return t // 100
+
+
 t_stat = stat.get(DATE, DailyStat())
 
 args = argv[1:4]
@@ -189,6 +251,13 @@ match parse_args(" ".join(args)):
             help("focus")
             quit()
 
+        if flag in ["-s", "--stopwatch"]:
+            t = render_stopwatch("[yellow]Focus[/]")
+            t_stat.total_time_focused += t
+            t_stat.focus_sessions_completed += 1
+            save_data(t_stat)
+            quit()
+
         if not dur:
             dur = F_DEFAULT
 
@@ -197,6 +266,13 @@ match parse_args(" ".join(args)):
     case "rest", dur, flag:
         if flag in ["-h", "--help"]:
             help("rest")
+            quit()
+
+        if flag in ["-s", "--stopwatch"]:
+            t = render_stopwatch("[yellow]Rest[/]")
+            t_stat.total_time_rested += t
+            t_stat.rest_sessions_completed += 1
+            save_data(t_stat)
             quit()
 
         if not dur:
