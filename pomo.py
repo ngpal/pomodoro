@@ -1,9 +1,7 @@
 import os
-import pickle
 import re
 import time
 from dataclasses import dataclass, field
-from datetime import date
 from itertools import cycle
 from statistics import mean
 from sys import argv
@@ -12,13 +10,14 @@ from dateutil import parser
 from rich.console import Console
 from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn
 
+from src import DailyStat, StatManager
+
 BAR_WIDTH = 50
 F_DEFAULT = 20
 R_DEFAULT = 5
 SPIN = cycle(["⡇", "⠏", "⠛", "⠹", "⢸", "⣰", "⣤", "⣆"])
-PATH = f"{os.path.realpath(os.path.dirname(__file__))}"
-DING = f"{PATH}/ding.mp3"
-DATE = str(date.today())
+DIR = f"{os.path.realpath(os.path.dirname(__file__))}"
+DING = f"{dir}/ding.mp3"
 
 FLAGS = r"(\-(h|q|s)|\-\-(help|quiet|stopwatch))"
 NUMS = r"([1-9]|[1-9][0-9]|[1-9][0-9][0-9])"
@@ -33,25 +32,7 @@ ARG_PATTERS = {
 hide_cursor = lambda: print("\033[?25l", end="")
 show_cursor = lambda: print("\033[?25h", end="")
 console = Console(highlight=False)
-
-
-class DailyStat:
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.total_time_focused = 0
-        self.total_time_rested = 0
-        self.focus_sessions_completed = 0
-        self.rest_sessions_completed = 0
-
-    def update_focus(self, dur: int):
-        self.total_time_focused += dur
-        self.focus_sessions_completed += 1
-
-    def update_rest(self, dur: int):
-        self.total_time_rested += dur
-        self.rest_sessions_completed += 1
+stats = StatManager()
 
 
 @dataclass
@@ -69,7 +50,7 @@ class Help:
         flags = "".join([f"    {x}\t: {y}\n" for x, y in self.flags])[:-1]
         examples = "".join(f"    $ {e}\n" for e in self.examples)[:-1]
 
-        with open(f"{PATH}/help_template.txt") as f:
+        with open(f"{DIR}/templates/help_template.txt") as f:
             template = f.read()
 
         template = template.replace("{desc}", self.desc)
@@ -143,32 +124,6 @@ def ding():
     os.system(f"mpg123 {DING} -q")
 
 
-def get_stats():
-    try:
-        with open(f"{PATH}/.pomo/stats.dat", "rb+") as f:
-            stat = pickle.load(f)
-    except EOFError:
-        stat = {}
-    except FileNotFoundError:
-        os.system(f"mkdir {PATH}/.pomo/")
-        open(f"{PATH}/.pomo/stats.dat", "w").close()
-        stat = {}
-
-    return stat
-
-
-def save_data(data):
-    stat[DATE] = data
-    with open(f"{PATH}/.pomo/stats.dat", "wb") as f:
-        pickle.dump(stat, f)
-
-
-def get_past_data():
-    with open(f"{PATH}/.pomo/stats.dat", "rb") as f:
-        stats = pickle.load(f)
-    return sorted(stats.items(), key=lambda x: x[0])[-7:]
-
-
 def parse_args(args: str) -> list:
     args_list = args.split()
     if ARG_PATTERS["cmd"].match(args):
@@ -207,11 +162,10 @@ def render_timer(command: str, dur: int, flag: str):
             time.sleep(1)
 
     if command == "Focus":
-        t_stat.update_focus(dur * 60)
+        stats.update_focus(dur * 60)
     else:
-        t_stat.update_rest(dur * 60)
+        stats.update_rest(dur * 60)
 
-    save_data(t_stat)
     console.print("[green b] Session complete!")
 
     if flag not in ["-q", "--quiet"]:
@@ -278,7 +232,7 @@ def render_graph():
 
         return x.total_time_focused / x.total_time_rested
 
-    data = get_past_data()
+    data = stats.get_past_data()
 
     if not data:
         console.print("[red b]No data!")
@@ -318,9 +272,6 @@ def render_graph():
     console.print(f"Average of past week: {avg}\n")
 
 
-stat = get_stats()
-t_stat = stat.get(DATE, DailyStat())
-
 args = argv[1:4]
 if not args or args[0] in ["-h", "--help"]:
     help()
@@ -334,8 +285,7 @@ match parse_args(" ".join(args)):
 
         if flag in ["-s", "--stopwatch"]:
             t = render_stopwatch("[yellow]Focus[/]")
-            t_stat.update_focus(t)
-            save_data(t_stat)
+            stats.update_focus(t)
             quit()
 
         if not dur:
@@ -350,8 +300,7 @@ match parse_args(" ".join(args)):
 
         if flag in ["-s", "--stopwatch"]:
             t = render_stopwatch("[yellow]Rest[/]")
-            t_stat.update_rest(t)
-            save_data(t_stat)
+            stats.update_rest(t)
             quit()
 
         if not dur:
@@ -368,7 +317,7 @@ match parse_args(" ".join(args)):
 
         else:
             try:
-                ratio = t_stat.total_time_focused / t_stat.total_time_rested
+                ratio = stats.total_time_focused / stats.total_time_rested
                 if ratio > 2:
                     ratio = f"[green b]{ratio:.2f}"
                 else:
@@ -376,25 +325,23 @@ match parse_args(" ".join(args)):
             except ZeroDivisionError:
                 ratio = "[red b]No rest today"
 
-            fm, fs = divmod(t_stat.total_time_focused, 60)
+            fm, fs = divmod(stats.total_time_focused, 60)
             fdat = f"[green b]{fm}[/] minutes"
             if fs:
                 fdat += f" [green b]{fs}[/] seconds"
 
-            rm, rs = divmod(t_stat.total_time_rested, 60)
+            rm, rs = divmod(stats.total_time_rested, 60)
             rdat = f"[magenta b]{rm}[/] minutes"
             if rs:
                 rdat += f" [magenta b]{rs}[/] seconds"
 
-            with open(f"{PATH}/stats_template.txt") as f:
+            with open(f"{DIR}/templates/stats_template.txt") as f:
                 template = f.read()
 
             template = template.replace("{focused}", fdat)
             template = template.replace("{rested}", rdat)
-            template = template.replace(
-                "{fcount}", f"{t_stat.focus_sessions_completed}"
-            )
-            template = template.replace("{rcount}", f"{t_stat.rest_sessions_completed}")
+            template = template.replace("{fcount}", f"{stats.focus_sessions_completed}")
+            template = template.replace("{rcount}", f"{stats.rest_sessions_completed}")
             template = template.replace("{ratio}", ratio)
 
             console.print("[red b u]TODAY'S STATS[/]\n")
