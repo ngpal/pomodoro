@@ -369,7 +369,7 @@ match parse_args(" ".join(args)):
         else:
             try:
                 ratio = t_stat.total_time_focused / t_stat.total_time_rested
-                if ratio > 1:
+                if ratio > 2:
                     ratio = f"[green b]{ratio:.2f}"
                 else:
                     ratio = f"[red b]{ratio:.2f}"
