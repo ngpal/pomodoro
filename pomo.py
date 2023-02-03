@@ -5,6 +5,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import date
 from itertools import cycle
+from statistics import mean
 from sys import argv
 
 from dateutil import parser
@@ -308,6 +309,13 @@ def render_graph():
         console.print(f"[blue]{key}[/] : {out} [/][b]{val:.2f}")
 
     print("")
+    avg = mean([x for _, x in data])
+    if avg >= 2:
+        avg = f"[green b]{avg:.2f}"
+    else:
+        avg = f"[red b]{avg:.2f}"
+
+    console.print(f"Average of past week: {avg}\n")
 
 
 stat = get_stats()
