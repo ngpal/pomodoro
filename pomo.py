@@ -288,7 +288,7 @@ def render_graph():
 
     max_val = max(x for _, x in data)
 
-    console.print("[magenta b]F/R RATIO GRAPH FOR THE PAST 7 DAYS\n")
+    console.print("[magenta b u]F/R RATIO GRAPH FOR THE PAST 7 DAYS\n")
     console.print("[green on green]0[/][green b] Good (above 2)   ", end="")
     console.print("[red on red]0[/][red b] Bad (below 2)\n")
 

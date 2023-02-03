@@ -2,5 +2,5 @@
 - [X] cli
 - [X] daily stats
 - [X] stopwatch mode
-- [ ] F/R ratio bar graph for the week
+- [X] F/R ratio bar graph for the week
 - [ ] all stats / average stats (weekly, monthly etc.)
