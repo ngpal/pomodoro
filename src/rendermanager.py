@@ -207,7 +207,7 @@ class RenderManager:
 
         max_val = max(x for _, x in data)
 
-        self.console.print("[magenta b u]F/R RATIO GRAPH FOR THE PAST 7 DAYS\n")
+        self.console.print("[b]F/R RATIO GRAPH FOR THE PAST 7 DAYS\n")
         self.console.print("[green on green]0[/][green b] Good (above 2)   ", end="")
         self.console.print("[red on red]0[/][red b] Bad (below 2)\n")
 
@@ -264,7 +264,6 @@ class RenderManager:
         template = template.replace("{rcount}", f"{stats.rest_sessions_completed}")
         template = template.replace("{ratio}", ratio)
 
-        self.console.print("[red b u]TODAY'S STATS[/]\n")
         self.console.print(template)
 
 
