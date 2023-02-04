@@ -1,7 +1,7 @@
 import re
 
 from src.rendermanager import RenderManager
-from src.statmanager import StatManager
+from src.statmanager import DailyStat, StatManager
 
 
 class CommandManager:

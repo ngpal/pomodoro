@@ -9,6 +9,8 @@ class StatManager:
 
     def __init__(self):
         self.stats = self.get_stats()
+        stat = self.get_todays_stats()
+        self._save_stats(stat)
 
     class DailyStat:
         def __init__(self):
@@ -16,6 +18,12 @@ class StatManager:
             self.total_time_rested = 0
             self.focus_sessions_completed = 0
             self.rest_sessions_completed = 0
+
+    class Unpickler(pickle.Unpickler):
+        def find_class(self, module, name):
+            if name == "DailyStat":
+                return DailyStat
+            return super().find_class(module, name)
 
     @property
     def total_time_focused(self):
@@ -55,7 +63,7 @@ class StatManager:
     def get_stats(self) -> dict:
         try:
             with open(self.DATAPATH, "rb+") as f:
-                stats = pickle.load(f)
+                stats = self.Unpickler(f).load()
         except EOFError:
             stats = {}
         except FileNotFoundError:
@@ -72,7 +80,7 @@ class StatManager:
 
     def get_past_data(self) -> list[tuple]:
         with open(self.DATAPATH, "rb") as f:
-            stats = pickle.load(f)
+            stats = self.Unpickler(f).load()
         return sorted(stats.items(), key=lambda x: x[0])[-7:]
 
 

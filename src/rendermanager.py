@@ -1,6 +1,7 @@
 import os
 import time
 from dataclasses import dataclass, field
+from datetime import date
 from itertools import cycle
 from statistics import mean
 
@@ -182,7 +183,7 @@ class RenderManager:
         if len(data) > 1:
             new_data.append(("Yesterday", data[-2][1]))
 
-        for date, val in data[-3:0:-1]:
+        for date, val in data[-3::-1]:
             day = parser.parse(date).date().strftime("%A").ljust(9)
             new_data.append((day, val))
 
