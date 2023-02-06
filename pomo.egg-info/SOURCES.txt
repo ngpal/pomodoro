@@ -1,0 +1,8 @@
+pomo.py
+setup.py
+pomo.egg-info/PKG-INFO
+pomo.egg-info/SOURCES.txt
+pomo.egg-info/dependency_links.txt
+pomo.egg-info/entry_points.txt
+pomo.egg-info/requires.txt
+pomo.egg-info/top_level.txt

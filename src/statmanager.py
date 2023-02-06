@@ -1,6 +1,6 @@
 import os
 import pickle
-from datetime import date
+from datetime import date, timedelta
 
 
 class StatManager:
@@ -81,7 +81,14 @@ class StatManager:
     def get_past_data(self) -> list[tuple]:
         with open(self.DATAPATH, "rb") as f:
             stats = self.Unpickler(f).load()
-        return sorted(stats.items(), key=lambda x: x[0])[-7:]
+
+        ret = []
+        day = date.today()
+        for _ in range(7):
+            ret.append((str(day), stats.get(str(day), DailyStat())))
+            day = day - timedelta(days=1)
+
+        return sorted(ret, key=lambda x: x[0])
 
 
 DailyStat = StatManager.DailyStat

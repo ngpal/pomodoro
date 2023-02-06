@@ -9,4 +9,6 @@ except:
     print("Unexpected error occured. (os.chdir)")
     quit()
 
-CommandManager().execute_cmd(argv[1:4])
+
+def main():
+    CommandManager().execute_cmd(argv[1:4])
