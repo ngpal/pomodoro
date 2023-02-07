@@ -44,7 +44,13 @@ class StatManager:
     def get_todays_stats(self) -> DailyStat:
         return self.stats.get(self.DATE, self.DailyStat())
 
-    def update_focus(self, dur: int):
+    def update(self, command: str, dur: int):
+        if command == "focus":
+            self._update_focus(dur)
+        else:
+            self._update_rest(dur)
+
+    def _update_focus(self, dur: int):
         t = self.get_todays_stats()
 
         t.total_time_focused += dur
@@ -52,7 +58,7 @@ class StatManager:
 
         self._save_stats(t)
 
-    def update_rest(self, dur: int):
+    def _update_rest(self, dur: int):
         t = self.get_todays_stats()
 
         t.total_time_rested += dur

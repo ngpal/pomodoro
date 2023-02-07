@@ -1,9 +1,16 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 setup(
     name="pomo",
     version="0.1.0",
-    py_modules=["pomo"],
-    install_requires=["rich"],
-    entry_points={"console_scripts": ["pomo=pomo:main"]},
+    packages=find_packages(),
+    include_package_data=True,
+    install_requires=[
+        "Click",
+    ],
+    entry_points={
+        "console_scripts": [
+            "pomo = pomo:cli",
+        ],
+    },
 )

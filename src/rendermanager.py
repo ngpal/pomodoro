@@ -142,11 +142,13 @@ class RenderManager:
 
         return f"{h}:{m}:{s}"
 
-    def render_stopwatch(self, text: str) -> int:
+    def render_stopwatch(self, command: str) -> int:
         h = m = s = 0
         w, _ = os.get_terminal_size()
         spinner = next(self.SPIN)
         t = 0
+
+        text = f"[yellow]{command.title()}[/]"
 
         try:
             self.hide_cursor()

@@ -1,5 +1,5 @@
-from src.commandmanager import CommandManager, DailyStat
+from src.commandmanager import DailyStat, cli
 from src.rendermanager import RenderManager
 from src.statmanager import StatManager
 
-__all__ = ["CommandManager", "RenderManager", "StatManager", "DailyStat"]
+__all__ = ["cli", "RenderManager", "StatManager", "DailyStat"]
