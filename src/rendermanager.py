@@ -1,7 +1,6 @@
 import os
 import time
 from dataclasses import dataclass, field
-from datetime import date
 from itertools import cycle
 from statistics import mean
 
